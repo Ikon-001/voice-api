@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Pidgin Voice API · Playground</title>
+    <style>
+      :root {
+        --bg: #fafaf7;
+        --card: #ffffff;
+        --text: #1c1c1a;
+        --muted: #6b6b66;
+        --line: #dcdcd4;
+        --accent: #1f7a4d;
+        --accent-text: #ffffff;
+        --error: #b3261e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #151614;
+          --card: #1f201d;
+          --text: #ecece6;
+          --muted: #a0a099;
+          --line: #34352f;
+          --accent: #3fb27f;
+          --accent-text: #0e1a14;
+          --error: #f2a29b;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px 48px;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          sans-serif;
+        line-height: 1.5;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-size: 1.5rem;
+        margin: 0 0 4px;
+      }
+      .sub {
+        color: var(--muted);
+        margin: 0 0 20px;
+      }
+      .card {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 16px;
+      }
+      label {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 6px;
+      }
+      input[type="password"],
+      textarea {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--bg);
+        color: var(--text);
+        font: inherit;
+      }
+      textarea {
+        min-height: 96px;
+        resize: vertical;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 0.85rem;
+        margin-top: 6px;
+      }
+      .row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 12px;
+      }
+      .chips {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .chip {
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--text);
+        padding: 6px 10px;
+        border-radius: 999px;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.9rem;
+      }
+      .chip:hover {
+        border-color: var(--accent);
+      }
+      button.primary {
+        background: var(--accent);
+        color: var(--accent-text);
+        border: 0;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button.primary:disabled {
+        opacity: 0.6;
+        cursor: wait;
+      }
+      #status {
+        min-height: 1.4em;
+        margin-top: 12px;
+        color: var(--muted);
+      }
+      #status.error {
+        color: var(--error);
+      }
+      audio {
+        width: 100%;
+        margin-top: 12px;
+      }
+      a.download {
+        display: inline-block;
+        margin-top: 8px;
+        color: var(--accent);
+      }
+      .note {
+        font-size: 0.9rem;
+        color: var(--muted);
+      }
+      input[type="range"] {
+        flex: 1;
+        min-width: 140px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Pidgin Voice API</h1>
+      <p class="sub">
+        Type Nigerian Pidgin, hear it spoken. A portfolio project, not for
+        commercial use.
+      </p>
+
+      <div class="card">
+        <label for="key">API key</label>
+        <input
+          id="key"
+          type="password"
+          autocomplete="off"
+          spellcheck="false"
+          placeholder="Paste your key here"
+        />
+        <div class="hint">
+          Your key stays in this tab’s memory only. It is never saved or sent
+          anywhere except to this server.
+        </div>
+      </div>
+
+      <div class="card">
+        <label for="text">Text</label>
+        <textarea
+          id="text"
+          maxlength="500"
+          placeholder="How you dey?"
+        ></textarea>
+        <div class="hint"><span id="count">0</span> / 500 characters</div>
+        <div class="chips" id="chips"></div>
+
+        <div class="row">
+          <label for="speed" style="margin: 0">Speed</label>
+          <input
+            id="speed"
+            type="range"
+            min="0.7"
+            max="1.2"
+            step="0.05"
+            value="1.0"
+          />
+          <span id="speedValue">1.00×</span>
+        </div>
+
+        <div class="row">
+          <button class="primary" id="go">Speak</button>
+          <span class="hint">Ctrl+Enter also works</span>
+        </div>
+
+        <div id="status" role="status" aria-live="polite"></div>
+        <audio id="player" controls hidden></audio>
+        <a id="download" class="download" download="speech.wav" hidden
+          >Download WAV</a
+        >
+      </div>
+
+      <p class="note">
+        Experimental: speech quality varies. Some sentences sound natural, but
+        sentences containing “wan” are a known weak spot. Built on Meta’s MMS
+        model, which is licensed for non-commercial use.
+      </p>
+    </main>
+
+    <script>
+      const samples = [
+        "How you dey?",
+        "Wetin you dey find?",
+        "Make we work",
+        "Wetin dey happen?",
+        "Na so e be",
+        "Mi dey go market",
+      ];
+      const keyInput = document.getElementById("key");
+      const textInput = document.getElementById("text");
+      const speedInput = document.getElementById("speed");
+      const speedValue = document.getElementById("speedValue");
+      const count = document.getElementById("count");
+      const goButton = document.getElementById("go");
+      const statusBox = document.getElementById("status");
+      const player = document.getElementById("player");
+      const download = document.getElementById("download");
+      const chips = document.getElementById("chips");
+      let currentUrl = null;
+
+      samples.forEach(function (s) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "chip";
+        b.textContent = s;
+        b.addEventListener("click", function () {
+          textInput.value = s;
+          updateCount();
+          textInput.focus();
+        });
+        chips.appendChild(b);
+      });
+
+      function updateCount() {
+        count.textContent = textInput.value.length;
+      }
+      function setStatus(message, isError) {
+        statusBox.textContent = message;
+        statusBox.className = isError ? "error" : "";
+      }
+
+      textInput.addEventListener("input", updateCount);
+      speedInput.addEventListener("input", function () {
+        speedValue.textContent = Number(speedInput.value).toFixed(2) + "×";
+      });
+      textInput.addEventListener("keydown", function (e) {
+        if (e.ctrlKey && e.key === "Enter") speak();
+      });
+      goButton.addEventListener("click", speak);
+
+      async function speak() {
+        const key = keyInput.value.trim();
+        const text = textInput.value.trim();
+        if (!key) {
+          setStatus("Paste your API key first.", true);
+          return;
+        }
+        if (!text) {
+          setStatus("Type some text first.", true);
+          return;
+        }
+
+        goButton.disabled = true;
+        setStatus("Generating…", false);
+        try {
+          const res = await fetch("/v1/speech", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + key,
+            },
+            body: JSON.stringify({
+              text: text,
+              language: "pcm",
+              speed: Number(speedInput.value),
+            }),
+          });
+
+          if (!res.ok) {
+            let message = "Request failed (" + res.status + ").";
+            try {
+              const data = await res.json();
+              if (data && data.error) {
+                message =
+                  data.error.message +
+                  " [" +
+                  data.error.code +
+                  ", request " +
+                  data.error.request_id +
+                  "]";
+              }
+            } catch (ignored) {}
+            throw new Error(message);
+          }
+
+          const blob = await res.blob();
+          if (currentUrl) URL.revokeObjectURL(currentUrl);
+          currentUrl = URL.createObjectURL(blob);
+          player.src = currentUrl;
+          player.hidden = false;
+          download.href = currentUrl;
+          download.hidden = false;
+          setStatus("Done.", false);
+          try {
+            await player.play();
+          } catch (ignored) {}
+        } catch (err) {
+          setStatus(err.message, true);
+        } finally {
+          goButton.disabled = false;
+        }
+      }
+    </script>
+  </body>
+</html>

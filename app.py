@@ -57,6 +57,10 @@ def handle_unexpected(err):
 def status():
     return jsonify({"status": "ok"})
 
+@app.get("/playground")
+def playground():
+    return app.send_static_file("playground.html")
+
 
 @app.post("/v1/speech")
 def speech():
