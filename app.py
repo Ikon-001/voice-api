@@ -1,12 +1,16 @@
 import logging
 import uuid
 
+from dotenv import load_dotenv
 from flask import Flask, Response, g, jsonify, request
 from werkzeug.exceptions import HTTPException
 
 from voice_api.audio import to_wav_bytes
+from voice_api.auth import check_api_key
 from voice_api.engines import get_speech_engine, speech_languages
 from voice_api.errors import ApiError, error_response
+
+load_dotenv()
 
 MAX_TEXT_CHARS = 500
 MIN_SPEED, MAX_SPEED = 0.7, 1.2
@@ -18,6 +22,12 @@ log = logging.getLogger("voice_api")
 @app.before_request
 def assign_request_id():
     g.request_id = uuid.uuid4().hex[:12]
+
+
+@app.before_request
+def authenticate():
+    if request.path.startswith("/v1/"):
+        check_api_key(request.headers.get("Authorization"))
 
 
 @app.after_request
