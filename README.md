@@ -6,7 +6,7 @@ A small text-to-speech API for Nigerian Pidgin, with a browser playground. I bui
 
 ![The playground page](docs/playground.png)
 
-Demo video: _(link to be added)_
+Demo video: _(Demo video: coming soon.)_
 
 ## What it does
 
